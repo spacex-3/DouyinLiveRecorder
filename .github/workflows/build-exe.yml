@@ -1,0 +1,67 @@
+name: Build EXE and Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Tag name for the release'
+        required: false
+
+jobs:
+  build_exe:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Build EXE with PyInstaller
+        run: |
+          pyinstaller --onefile --name DouyinLiveRecorder ^
+            --add-data "config;config" ^
+            --add-data "douyinliverecorder;douyinliverecorder" ^
+            --add-data "src;src" ^
+            --add-data "index.html;." ^
+            --add-data "ffmpeg.exe;." ^
+            --add-data "StopRecording.vbs;." ^
+            --hidden-import=execjs ^
+            --hidden-import=PyExecJS ^
+            --noconfirm ^
+            main.py
+
+      - name: Create zip package
+        run: |
+          mkdir release_package
+          copy dist\DouyinLiveRecorder.exe release_package\
+          copy config\* release_package\config\
+          copy index.html release_package\
+          copy StopRecording.vbs release_package\
+          copy ffmpeg.exe release_package\
+          cd release_package
+          Compress-Archive -Path * -DestinationPath ..\DouyinLiveRecorder_${{ github.ref_name }}_win64.zip
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            DouyinLiveRecorder_${{ github.ref_name }}_win64.zip
+            dist/DouyinLiveRecorder.exe
+          generate_release_notes: true
+          draft: false
+          prerelease: false
