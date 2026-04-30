@@ -12,60 +12,17 @@
 
 </div>
 
-## 😺已支持平台
+## 😺当前 README 重点保留平台
+
+> 为了降低阅读负担，当前 README 仅保留本 Fork 当前重点展示与常用配置示例的平台；代码中的其他平台适配与历史能力不在这里展开。
 
 - [x] 抖音
 - [x] TikTok
 - [x] 快手
 - [x] 虎牙
 - [x] 斗鱼
-- [x] YY
-- [x] B站
+- [x] 哔哩哔哩（B站）
 - [x] 小红书
-- [x] bigo 
-- [x] blued
-- [x] SOOP(原AfreecaTV)
-- [x] 网易cc
-- [x] 千度热播
-- [x] PandaTV
-- [x] 猫耳FM
-- [x] Look直播
-- [x] WinkTV
-- [x] TTingLive(原Flextv)
-- [x] PopkonTV
-- [x] TwitCasting
-- [x] 百度直播
-- [x] 微博直播
-- [x] 酷狗直播
-- [x] TwitchTV
-- [x] LiveMe
-- [x] 花椒直播
-- [x] 流星直播
-- [x] ShowRoom
-- [x] Acfun
-- [x] 映客直播
-- [x] 音播直播
-- [x] 知乎直播
-- [x] CHZZK
-- [x] 嗨秀直播
-- [x] vv星球直播
-- [x] 17Live
-- [x] 浪Live
-- [x] 畅聊直播
-- [x] 飘飘直播
-- [x] 六间房直播
-- [x] 乐嗨直播
-- [x] 花猫直播
-- [x] Shopee
-- [x] Youtube
-- [x] 淘宝
-- [x] 京东
-- [x] Faceit
-- [x] 咪咕
-- [x] 连接直播
-- [x] 来秀直播
-- [x] Picarto
-- [ ] 更多平台正在更新中
 
 </div>
 
@@ -172,7 +129,7 @@ docker-compose up -d
 - 压缩包解压后，在 `config` 文件夹内的 `URL_config.ini` 中添加录制直播间地址，一行一个直播间地址。如果要自定义配置录制，可以修改`config.ini` 文件，推荐将录制格式修改为`ts`。
 - 以上步骤都做好后，就可以运行`DouyinLiveRecorder.exe` 程序进行录制了。录制的视频文件保存在同目录下的 `downloads` 文件夹内。
 
-- 另外，如果需要录制TikTok、AfreecaTV等海外平台，请在配置文件中设置开启代理并添加proxy_addr链接 如：`127.0.0.1:7890` （这只是示例地址，具体根据实际填写）。
+- 另外，如果需要录制 TikTok 等可能需要代理访问的平台，请在配置文件中设置开启代理，并填写 `proxy_addr`，如：`127.0.0.1:7890`（仅为示例地址，请按实际代理配置填写）。
 
 - 假如`URL_config.ini`文件中添加的直播间地址，有个别直播间暂时不想录制又不想移除链接，可以在对应直播间的链接开头加上`#`，那么将停止该直播间的监测以及录制。
 
@@ -198,7 +155,7 @@ docker-compose up -d
 抖音:
 https://live.douyin.com/745964462470
 https://v.douyin.com/iQFeBnt/
-https://live.douyin.com/yall1102  （链接+抖音号）
+https://live.douyin.com/yall1102  （链接 + 抖音号）
 https://v.douyin.com/CeiU5cbX  （主播主页地址）
 
 TikTok:
@@ -214,145 +171,11 @@ https://www.huya.com/52333
 https://www.douyu.com/3637778?dyshid=
 https://www.douyu.com/topic/wzDBLS6?rid=4921614&dyshid=
 
-YY:
-https://www.yy.com/22490906/22490906
-
-B站:
+哔哩哔哩（B站）:
 https://live.bilibili.com/320
 
-小红书（直播间分享地址):
+小红书（直播间分享地址）:
 http://xhslink.com/xpJpfM
-
-bigo直播:
-https://www.bigo.tv/cn/716418802
-
-buled直播:
-https://app.blued.cn/live?id=Mp6G2R
-
-SOOP:
-https://play.sooplive.co.kr/sw7love
-
-网易cc:
-https://cc.163.com/583946984
-
-千度热播:
-https://qiandurebo.com/web/video.php?roomnumber=33333
-
-PandaTV:
-https://www.pandalive.co.kr/live/play/bara0109
-
-猫耳FM:
-https://fm.missevan.com/live/868895007
-
-Look直播:
-https://look.163.com/live?id=65108820&position=3
-
-WinkTV:
-https://www.winktv.co.kr/live/play/anjer1004
-
-FlexTV(TTinglive)::
-https://www.flextv.co.kr/channels/593127/live
-
-PopkonTV:
-https://www.popkontv.com/live/view?castId=wjfal007&partnerCode=P-00117
-https://www.popkontv.com/channel/notices?mcid=wjfal007&mcPartnerCode=P-00117
-
-TwitCasting:
-https://twitcasting.tv/c:uonq
-
-百度直播:
-https://live.baidu.com/m/media/pclive/pchome/live.html?room_id=9175031377&tab_category
-
-微博直播:
-https://weibo.com/l/wblive/p/show/1022:2321325026370190442592
-
-酷狗直播:
-https://fanxing2.kugou.com/50428671?refer=2177&sourceFrom=
-
-TwitchTV:
-https://www.twitch.tv/gamerbee
-
-LiveMe:
-https://www.liveme.com/zh/v/17141543493018047815/index.html
-
-花椒直播:
-https://www.huajiao.com/l/345096174
-
-流星直播:
-https://www.7u66.com/100960
-
-ShowRoom:
-https://www.showroom-live.com/room/profile?room_id=480206  （主播主页地址）
-
-Acfun:
-https://live.acfun.cn/live/179922
-
-映客直播:
-https://www.inke.cn/liveroom/index.html?uid=22954469&id=1720860391070904
-
-音播直播:
-https://live.ybw1666.com/800002949
-
-知乎直播:
-https://www.zhihu.com/people/ac3a467005c5d20381a82230101308e9 (主播主页地址)
-
-CHZZK:
-https://chzzk.naver.com/live/458f6ec20b034f49e0fc6d03921646d2
-
-嗨秀直播:
-https://www.haixiutv.com/6095106
-
-VV星球直播:
-https://h5webcdn-pro.vvxqiu.com//activity/videoShare/videoShare.html?h5Server=https://h5p.vvxqiu.com&roomId=LP115924473&platformId=vvstar
-
-17Live:
-https://17.live/en/live/6302408
-
-浪Live:
-https://www.lang.live/en-US/room/3349463
-
-畅聊直播:
-https://live.tlclw.com/106188
-
-飘飘直播:
-https://m.pp.weimipopo.com/live/preview.html?uid=91648673&anchorUid=91625862&app=plpl
-
-六间房直播:
-https://v.6.cn/634435
-
-乐嗨直播:
-https://www.lehaitv.com/8059096
-
-花猫直播:
-https://h.catshow168.com/live/preview.html?uid=19066357&anchorUid=18895331
-
-Shopee:
-https://sg.shp.ee/GmpXeuf?uid=1006401066&session=802458
-
-Youtube:
-https://www.youtube.com/watch?v=cS6zS5hi1w0
-
-淘宝(需cookie):
-https://tbzb.taobao.com/live?liveId=532359023188
-https://m.tb.cn/h.TWp0HTd
-
-京东:
-https://3.cn/28MLBy-E
-
-Faceit:
-https://www.faceit.com/zh/players/Compl1/stream
-
-连接直播:
-https://show.lailianjie.com/10000258
-
-咪咕直播:
-https://www.miguvideo.com/p/live/120000541321
-
-来秀直播:
-https://www.imkktv.com/h5/share/video.html?uid=1845195&roomId=1710496
-
-Picarto:
-https://www.picarto.tv/cuteavalanche
 ```
 
 &emsp;
