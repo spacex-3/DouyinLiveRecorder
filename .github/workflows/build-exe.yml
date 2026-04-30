@@ -45,12 +45,12 @@ jobs:
 
       - name: Create zip package
         run: |
-          mkdir release_package
-          copy dist\DouyinLiveRecorder.exe release_package\
-          copy config\* release_package\config\
-          copy index.html release_package\
-          copy StopRecording.vbs release_package\
-          copy ffmpeg.exe release_package\
+          New-Item -ItemType Directory -Path release_package\config -Force
+          Copy-Item dist\DouyinLiveRecorder.exe release_package\
+          Copy-Item config\* release_package\config\ -Recurse
+          Copy-Item index.html release_package\
+          Copy-Item StopRecording.vbs release_package\
+          Copy-Item ffmpeg.exe release_package\
           Compress-Archive -Path release_package\* -DestinationPath DouyinLiveRecorder_${{ github.ref_name }}_win64.zip
 
       - name: Create GitHub Release
