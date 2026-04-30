@@ -33,17 +33,7 @@ jobs:
 
       - name: Build EXE with PyInstaller
         run: |
-          pyinstaller --onefile --name DouyinLiveRecorder ^
-            --add-data "config;config" ^
-            --add-data "douyinliverecorder;douyinliverecorder" ^
-            --add-data "src;src" ^
-            --add-data "index.html;." ^
-            --add-data "ffmpeg.exe;." ^
-            --add-data "StopRecording.vbs;." ^
-            --hidden-import=execjs ^
-            --hidden-import=PyExecJS ^
-            --noconfirm ^
-            main.py
+          pyinstaller --onefile --name DouyinLiveRecorder --add-data "config;config" --add-data "douyinliverecorder;douyinliverecorder" --add-data "src;src" --add-data "index.html;." --add-data "ffmpeg.exe;." --add-data "StopRecording.vbs;." --hidden-import=execjs --hidden-import=PyExecJS --noconfirm main.py
 
       - name: Create zip package
         run: |
@@ -53,8 +43,7 @@ jobs:
           copy index.html release_package\
           copy StopRecording.vbs release_package\
           copy ffmpeg.exe release_package\
-          cd release_package
-          Compress-Archive -Path * -DestinationPath ..\DouyinLiveRecorder_${{ github.ref_name }}_win64.zip
+          Compress-Archive -Path release_package\* -DestinationPath DouyinLiveRecorder_${{ github.ref_name }}_win64.zip
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
