@@ -2,22 +2,22 @@ name: Build and Push Docker Image
 
 on:
   push:
+    branches:
+      - main
     tags:
       - '*'
   workflow_dispatch:
-    inputs:
-      tag_name:
-        description: 'Tag name for the Docker image'
-        required: false
-        default: 'latest'
 
 jobs:
   build_and_push:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -33,12 +33,22 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-buildx-
 
-      - name: Log in to Docker Hub
+      - name: Log in to GitHub Container Registry
         uses: docker/login-action@v2
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_PASSWORD }}
-          registry: docker.io
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=ref,event=branch
+            type=ref,event=tag
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
@@ -46,9 +56,8 @@ jobs:
           context: .
           file: ./Dockerfile
           push: true
-          tags: |
-            ihmily/douyin-live-recorder:${{ github.event.inputs.tag_name || github.ref_name }} 
-            ihmily/douyin-live-recorder:latest
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
           platforms: linux/amd64,linux/arm64
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache
