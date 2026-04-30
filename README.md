@@ -3,12 +3,12 @@
 ## 💡简介
 [![Python Version](https://img.shields.io/badge/python-3.11.6-blue.svg)](https://www.python.org/downloads/release/python-3116/)
 [![Supported Platforms](https://img.shields.io/badge/platforms-Windows%20%7C%20Linux-blue.svg)](https://github.com/ihmily/DouyinLiveRecorder)
-[![Docker Pulls](https://img.shields.io/docker/pulls/ihmily/douyin-live-recorder?label=Docker%20Pulls&color=blue&logo=docker)](https://hub.docker.com/r/ihmily/douyin-live-recorder/tags)
-![GitHub issues](https://img.shields.io/github/issues/ihmily/DouyinLiveRecorder.svg)
-[![Latest Release](https://img.shields.io/github/v/release/ihmily/DouyinLiveRecorder)](https://github.com/ihmily/DouyinLiveRecorder/releases/latest)
-[![Downloads](https://img.shields.io/github/downloads/ihmily/DouyinLiveRecorder/total)](https://github.com/ihmily/DouyinLiveRecorder/releases/latest)
+[![GitHub issues](https://img.shields.io/github/issues/spacex-3/DouyinLiveRecorder.svg)](https://github.com/spacex-3/DouyinLiveRecorder/issues)
+[![Latest Release](https://img.shields.io/github/v/release/spacex-3/DouyinLiveRecorder)](https://github.com/spacex-3/DouyinLiveRecorder/releases/latest)
 
 一款**简易**的可循环值守的直播录制工具，基于FFmpeg实现多平台直播源录制，支持自定义配置录制以及直播状态推送。
+
+**本 Fork 版本**在原版基础上增强了 Web 控制台，新增抖音值守面板、录制任务控制（暂停/继续/停止）、配置热重载、磁盘告警等功能。Docker 镜像托管在 GitHub Container Registry (ghcr.io)。
 
 </div>
 
@@ -77,6 +77,7 @@
     ├── /config -> (config record)
     ├── /logs -> (save runing log file)
     ├── /backup_config -> (backup file)
+    ├── /downloads -> (recorded video files)
     ├── /douyinliverecorder -> (package)
         ├── initializer.py-> (check and install nodejs)
     	├── spider.py-> (get live data)
@@ -87,6 +88,9 @@
     	├── ab_sign.py-> (generate dy token)
     	├── /javascript -> (some decrypt code)
     ├── main.py -> (main file)
+    ├── src/
+    │   ├── web_console.py -> (Web 控制台后端 + 前端)
+    │   └── config_store.py -> (配置管理模块)
     ├── ffmpeg_install.py -> (ffmpeg install script)
     ├── demo.py -> (call package test demo)
     ├── msg_push.py -> (send live status update message)
@@ -95,7 +99,10 @@
     ├── requirements.txt -> (library dependencies)
     ├── docker-compose.yaml -> (Container Orchestration File)
     ├── Dockerfile -> (Application Build Recipe)
-    ├── StopRecording.vbs -> (stop recording script on Windows)
+    ├── RUNBOOK.md -> (运维手册)
+    ├── CHANGELOG.md -> (变更日志)
+    ├── DONE.md -> (完成记录)
+    ├── DELIVERY_CHECKLIST.md -> (交付检查清单)
     ...
 ```
 
@@ -113,11 +120,25 @@
   - 在本地 CLI / exe 模式下会自动绑定 `127.0.0.1`
 - `Web控制台端口 = 18080`
 
-Web 控制台主要页面 / 能力：
+#### Web 控制台主要功能
 
-- **总览页**：当前录制格式、默认画质、计划录制列表、正在录制、最近完成记录、下载目录容量、最近日志 / 错误 / 关键事件
-- **config.ini 页**：按分组查看和编辑主配置；敏感字段（cookie / token / 密码）默认脱敏显示
-- **URL_config.ini 页**：直接编辑直播间列表原文，并提供解析预览
+**抖音值守面板（本 Fork 新增）：**
+- **抖音专属状态卡**：监测列表、在线/录制状态、最近录制信息
+- **最近录制任务详情面板**：展示最近 10 条录制记录
+- **录制文件筛选/搜索**：按房间名、时间、文件大小筛选
+- **磁盘使用率告警**：剩余空间不足时显示红色横幅
+- **异常提示**：最近 24 小时错误次数、ERROR 事件横幅提醒
+
+**录制任务控制（本 Fork 新增）：**
+- **暂停**：结束当前录制段，保存已有片段，状态显示"已暂停"
+- **继续**：启动新的录制段（新文件名）
+- **停止**：停止录制，下次检测到开播时自动重新录制
+- **重新录制**：手动恢复已停止的 URL
+
+**配置管理：**
+- **config.ini 页面**：按分组查看和编辑主配置；敏感字段（cookie / token / 密码）默认脱敏显示
+- **URL_config.ini 页面**：直接编辑直播间列表原文，并提供解析预览
+- **配置热重载**：保存 config.ini / URL_config.ini 后立即生效，无需重启
 
 热更新说明：
 
@@ -133,6 +154,18 @@ Web 控制台主要页面 / 能力：
 - **exe**：启动 `DouyinLiveRecorder.exe` 后，默认访问 `http://127.0.0.1:18080`
 
 > 当 `URL_config.ini` 为空且 Web 控制台开启时，程序会进入等待状态而不会强制在控制台阻塞输入，方便直接在网页里补充抖音直播间地址。
+
+#### Docker 镜像
+
+本 Fork 版本使用 GitHub Container Registry (ghcr.io) 托管 Docker 镜像，每次 push main 分支自动编译：
+
+```bash
+# 拉取最新镜像
+docker pull ghcr.io/spacex-3/douyin-live-recorder:latest
+
+# 或使用 docker-compose
+docker-compose up -d
+```
 
 - 对于只想使用录制软件的小白用户，进入[Releases](https://github.com/ihmily/DouyinLiveRecorder/releases) 中下载最新发布的 zip压缩包即可，里面有打包好的录制软件。（有些电脑可能会报毒，直接忽略即可，如果下载时被浏览器屏蔽，请更换浏览器下载）
 
@@ -152,9 +185,10 @@ Web 控制台主要页面 / 能力：
 
 #### Docker 额外说明
 
-- `docker-compose.yaml` 已增加 `18080:18080` 端口映射示例
+- `docker-compose.yaml` 已配置 `ghcr.io/spacex-3/douyin-live-recorder:latest` 镜像
 - 若你使用自定义 `直播保存路径(不填则默认)`，Web 控制台中的磁盘容量与文件列表会按该路径展示
 - Docker volume 挂载到 `/app/downloads` 或自定义目录后，控制台会显示容器内真实挂载路径与容量信息
+- Web 控制台端口 `18080` 已在 docker-compose.yaml 中配置映射
 
 &emsp;
 
@@ -473,7 +507,7 @@ uv run main.py
 
 1.快速启动
 
-最简单方法是运行项目中的 [docker-compose.yaml](https://github.com/ihmily/DouyinLiveRecorder/blob/main/docker-compose.yaml) 文件，只需简单执行以下命令：
+最简单方法是运行项目中的 [docker-compose.yaml](https://github.com/spacex-3/DouyinLiveRecorder/blob/main/docker-compose.yaml) 文件，只需简单执行以下命令：
 
 ```bash
 docker-compose up
@@ -485,7 +519,7 @@ docker-compose up
 
 2.构建镜像(可选)
 
-如果你只想简单的运行程序，则不需要做这一步。Docker镜像仓库中代码版本可能不是最新的，如果要运行本仓库主分支最新代码，可以本地自定义构建，通过修改 [docker-compose.yaml](https://github.com/ihmily/DouyinLiveRecorder/blob/main/docker-compose.yaml) 文件，如将镜像名修改为 `douyin-live-recorder:latest`，并取消 `# build: .` 注释，然后再执行
+如果你只想简单的运行程序，则不需要做这一步。Docker镜像仓库中代码版本可能不是最新的，如果要运行本仓库主分支最新代码，可以本地自定义构建，通过修改 [docker-compose.yaml](https://github.com/spacex-3/DouyinLiveRecorder/blob/main/docker-compose.yaml) 文件，如将镜像名修改为 `douyin-live-recorder:latest`，并取消 `# build: .` 注释，然后再执行
 
 ```bash
 docker build -t douyin-live-recorder:latest .
