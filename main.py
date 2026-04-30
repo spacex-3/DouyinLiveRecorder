@@ -1863,7 +1863,7 @@ print("|                DouyinLiveRecorder                 |")
 print("-----------------------------------------------------")
 
 print(f"版本号: {version}")
-print("GitHub: https://github.com/ihmily/DouyinLiveRecorder")
+print("GitHub: https://github.com/spacex-3/DouyinLiveRecorder")
 print(f'支持平台: {platforms}')
 print('.....................................................')
 if not check_ffmpeg_existence():

@@ -1,8 +1,8 @@
-![video_spider](https://socialify.git.ci/ihmily/DouyinLiveRecorder/image?font=Inter&forks=1&language=1&owner=1&pattern=Circuit%20Board&stargazers=1&theme=Light)
+![video_spider](https://socialify.git.ci/spacex-3/DouyinLiveRecorder/image?font=Inter&forks=1&language=1&owner=1&pattern=Circuit%20Board&stargazers=1&theme=Light)
 
 ## 💡简介
 [![Python Version](https://img.shields.io/badge/python-3.11.6-blue.svg)](https://www.python.org/downloads/release/python-3116/)
-[![Supported Platforms](https://img.shields.io/badge/platforms-Windows%20%7C%20Linux-blue.svg)](https://github.com/ihmily/DouyinLiveRecorder)
+[![Supported Platforms](https://img.shields.io/badge/platforms-Windows%20%7C%20Linux-blue.svg)](https://github.com/spacex-3/DouyinLiveRecorder)
 [![GitHub issues](https://img.shields.io/github/issues/spacex-3/DouyinLiveRecorder.svg)](https://github.com/spacex-3/DouyinLiveRecorder/issues)
 [![Latest Release](https://img.shields.io/github/v/release/spacex-3/DouyinLiveRecorder)](https://github.com/spacex-3/DouyinLiveRecorder/releases/latest)
 
@@ -124,7 +124,7 @@ docker pull ghcr.io/spacex-3/douyin-live-recorder:latest
 docker-compose up -d
 ```
 
-- 对于只想使用录制软件的小白用户，进入[Releases](https://github.com/ihmily/DouyinLiveRecorder/releases) 中下载最新发布的 zip压缩包即可，里面有打包好的录制软件。（有些电脑可能会报毒，直接忽略即可，如果下载时被浏览器屏蔽，请更换浏览器下载）
+- 对于只想使用录制软件的小白用户，进入[Releases](https://github.com/spacex-3/DouyinLiveRecorder/releases) 中下载最新发布的 zip压缩包即可，里面有打包好的录制软件。（有些电脑可能会报毒，直接忽略即可，如果下载时被浏览器屏蔽，请更换浏览器下载）
 
 - 压缩包解压后，在 `config` 文件夹内的 `URL_config.ini` 中添加录制直播间地址，一行一个直播间地址。如果要自定义配置录制，可以修改`config.ini` 文件，推荐将录制格式修改为`ts`。
 - 以上步骤都做好后，就可以运行`DouyinLiveRecorder.exe` 程序进行录制了。录制的视频文件保存在同目录下的 `downloads` 文件夹内。
@@ -186,7 +186,7 @@ http://xhslink.com/xpJpfM
 1.首先拉取或手动下载本仓库项目代码
 
 ```bash
-git clone https://github.com/ihmily/DouyinLiveRecorder.git
+git clone https://github.com/spacex-3/DouyinLiveRecorder.git
 ```
 
 2.进入项目文件夹，安装依赖

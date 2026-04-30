@@ -17,7 +17,7 @@ dependencies = [
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/ihmily/DouyinLiveRecorder"
-"Documentation" = "https://github.com/ihmily/DouyinLiveRecorder"
-"Repository" = "https://github.com/ihmily/DouyinLiveRecorder"
-"Issues" = "https://github.com/ihmily/DouyinLiveRecorder/issues"
+"Homepage" = "https://github.com/spacex-3/DouyinLiveRecorder"
+"Documentation" = "https://github.com/spacex-3/DouyinLiveRecorder"
+"Repository" = "https://github.com/spacex-3/DouyinLiveRecorder"
+"Issues" = "https://github.com/spacex-3/DouyinLiveRecorder/issues"
