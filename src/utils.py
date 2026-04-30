@@ -14,6 +14,7 @@ from urllib.parse import parse_qs, urlparse
 from collections import OrderedDict
 import execjs
 from .logger import logger
+from .config_store import load_ini, save_ini
 import configparser
 
 OptionalStr = str | None
@@ -83,25 +84,19 @@ def read_config_value(file_path: str | Path, section: str, key: str) -> str | No
 
 
 def update_config(file_path: str | Path, section: str, key: str, new_value: str) -> None:
-    config = configparser.ConfigParser()
-
     try:
-        config.read(file_path, encoding='utf-8-sig')
+        config = load_ini(file_path)
     except Exception as e:
         print(f"An error occurred while reading the configuration file: {e}")
         return
 
     if section not in config:
-        print(f"Section [{section}] does not exist in the file.")
-        return
+        config.add_section(section)
 
-    # 转义%字符
-    escaped_value = new_value.replace('%', '%%')
-    config[section][key] = escaped_value
+    config[section][key] = new_value
 
     try:
-        with open(file_path, 'w', encoding='utf-8-sig') as configfile:
-            config.write(configfile)
+        save_ini(config, file_path)
         print(f"The value of {key} under [{section}] in the configuration file has been updated.")
     except Exception as e:
         print(f"Error occurred while writing to the configuration file: {e}")

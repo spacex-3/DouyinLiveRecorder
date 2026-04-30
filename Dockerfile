@@ -16,4 +16,6 @@ RUN apt-get update && \
     ln -fs /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && \
     dpkg-reconfigure -f noninteractive tzdata
 
+EXPOSE 18080
+
 CMD ["python", "main.py"]

@@ -31,6 +31,8 @@ from src import spider, stream
 from src.proxy import ProxyDetector
 from src.utils import logger
 from src import utils
+from src.config_store import CONFIG_WRITE_LOCK, ensure_file, atomic_write_text, save_ini
+from src.web_console import WebConsoleService
 from msg_push import (
     dingtalk, xizhi, tg_bot, send_email, bark, ntfy, pushplus
 )
@@ -62,7 +64,8 @@ exit_recording = False
 need_update_line_list = []
 first_run = True
 not_record_list = []
-start_display_time = datetime.datetime.now()
+process_start_time = datetime.datetime.now()
+start_display_time = process_start_time
 global_proxy = False
 recording_time_list = {}
 script_path = os.path.split(os.path.realpath(sys.argv[0]))[0]
@@ -73,11 +76,15 @@ text_encoding = 'utf-8-sig'
 rstr = r"[\/\\\:\*\？?\"\<\>\|&#.。,， ~！· ]"
 default_path = f'{script_path}/downloads'
 os.makedirs(default_path, exist_ok=True)
-file_update_lock = threading.Lock()
+file_update_lock = CONFIG_WRITE_LOCK
 os_type = os.name
 clear_command = "cls" if os_type == 'nt' else "clear"
 color_obj = utils.Color()
 os.environ['PATH'] = ffmpeg_path + os.pathsep + current_env_path
+
+web_console_service = None
+last_config_scan_at = None
+waiting_for_url_notice = False
 
 
 def signal_handler(_signal, _frame):
@@ -85,6 +92,117 @@ def signal_handler(_signal, _frame):
 
 
 signal.signal(signal.SIGTERM, signal_handler)
+
+
+def resolve_download_path() -> str:
+    save_path = globals().get('video_save_path') or default_path
+    path_obj = Path(save_path).expanduser()
+    try:
+        return str(path_obj.resolve())
+    except OSError:
+        return str(path_obj.absolute())
+
+
+def build_runtime_snapshot() -> dict[str, Any]:
+    return {
+        'version': version,
+        'video_save_type': globals().get('video_save_type', ''),
+        'video_record_quality': globals().get('video_record_quality', ''),
+        'monitoring': globals().get('monitoring', 0),
+        'max_request': globals().get('max_request', pre_max_request),
+        'use_proxy': globals().get('use_proxy', False),
+        'global_proxy': global_proxy,
+        'split_video_by_time': globals().get('split_video_by_time', False),
+        'split_time': globals().get('split_time', ''),
+        'create_time_file': globals().get('create_time_file', False),
+        'delay_default': globals().get('delay_default', 0),
+        'error_count': error_count,
+        'download_path': resolve_download_path(),
+        'uptime_seconds': int((datetime.datetime.now() - process_start_time).total_seconds()),
+        'has_douyin_cookie': bool(str(globals().get('dy_cookie', '')).strip()),
+        'disk_space_limit_gb': globals().get('disk_space_limit', 0),
+        'last_config_scan_at': last_config_scan_at,
+        'web_hint': (f'可直接访问 {web_console_service.access_url}'
+                     if web_console_service and web_console_service.is_running else 'Web 控制台未启动'),
+    }
+
+
+def register_web_recording_start(record_name: str, record_url: str, save_file_path: str, save_type: str,
+                                 platform: str = '') -> None:
+    if web_console_service and web_console_service.is_running:
+        record_quality = ''
+        if record_name in recording_time_list:
+            record_quality = recording_time_list[record_name][1]
+        web_console_service.recording_started(
+            record_name=record_name,
+            record_url=record_url,
+            save_file_path=save_file_path,
+            save_type=save_type,
+            platform=platform,
+            quality=record_quality,
+        )
+
+
+def register_web_recording_finish(record_name: str, status: str, save_file_path: str | None = None,
+                                  note: str = '') -> None:
+    if web_console_service and web_console_service.is_running:
+        web_console_service.recording_finished(record_name, status, save_file_path=save_file_path, note=note)
+
+
+def register_web_recording_pause(record_name: str, save_file_path: str | None = None, note: str = '') -> None:
+    if web_console_service and web_console_service.is_running:
+        web_console_service.recording_paused(record_name, save_file_path=save_file_path, note=note)
+
+
+def register_web_recording_process(record_name: str, process: subprocess.Popen) -> None:
+    if web_console_service and web_console_service.is_running:
+        web_console_service.register_recording_process(record_name, process)
+
+
+def unregister_web_recording_process(record_name: str) -> None:
+    if web_console_service and web_console_service.is_running:
+        web_console_service.unregister_recording_process(record_name)
+
+
+def should_stop_via_web(record_name: str = '', record_url: str = '') -> bool:
+    return bool(web_console_service and web_console_service.is_running and
+                web_console_service.should_stop_recording(record_name=record_name, record_url=record_url))
+
+
+def should_block_start_via_web(record_name: str = '', record_url: str = '', cooldown_seconds: int = 0) -> bool:
+    return bool(web_console_service and web_console_service.is_running and
+                web_console_service.should_block_recording_start(
+                    record_name=record_name,
+                    record_url=record_url,
+                    cooldown_seconds=cooldown_seconds,
+                ))
+
+
+def is_paused_via_web(record_name: str = '', record_url: str = '') -> bool:
+    return bool(web_console_service and web_console_service.is_running and
+                web_console_service.is_recording_paused(record_name=record_name, record_url=record_url))
+
+
+def get_web_stop_state(record_name: str = '', record_url: str = '') -> dict[str, Any]:
+    if web_console_service and web_console_service.is_running:
+        return web_console_service.get_stop_request_state(record_name=record_name, record_url=record_url)
+    return {
+        'requested': False,
+        'reason': '',
+        'requested_at': '',
+        'age_seconds': 0,
+    }
+
+
+def auto_resume_stopped_url_via_web(record_name: str = '', record_url: str = '') -> bool:
+    if not web_console_service or not web_console_service.is_running:
+        return False
+    result = web_console_service.release_stop_request(
+        record_name=record_name,
+        record_url=record_url,
+        source='auto-live',
+    )
+    return bool(result.get('ok'))
 
 
 def display_info() -> None:
@@ -151,22 +269,19 @@ def update_file(file_path: str, old_str: str, new_str: str, start_str: str = Non
             except RuntimeError as e:
                 logger.error(f"错误信息: {e} 发生错误的行数: {e.__traceback__.tb_lineno}")
                 if ini_URL_content:
-                    with open(file_path, "w", encoding=text_encoding) as f2:
-                        f2.write(ini_URL_content)
+                    atomic_write_text(file_path, ini_URL_content, encoding=text_encoding)
                     return old_str
         if file_data:
-            with open(file_path, "w", encoding=text_encoding) as f:
-                f.write(''.join(file_data))
+            atomic_write_text(file_path, ''.join(file_data), encoding=text_encoding)
         return new_str
 
 
 def delete_line(file_path: str, del_line: str, delete_all: bool = False) -> None:
     with file_update_lock:
-        with open(file_path, 'r+', encoding=text_encoding) as f:
+        with open(file_path, 'r', encoding=text_encoding) as f:
             lines = f.readlines()
-            f.seek(0)
-            f.truncate()
             skip_line = False
+            updated_lines = []
             for txt_line in lines:
                 if del_line in txt_line:
                     if delete_all or not skip_line:
@@ -174,7 +289,8 @@ def delete_line(file_path: str, del_line: str, delete_all: bool = False) -> None
                         continue
                 else:
                     skip_line = False
-                f.write(txt_line)
+                updated_lines.append(txt_line)
+        atomic_write_text(file_path, ''.join(updated_lines), encoding=text_encoding)
 
 
 def get_startup_info(system_type: str):
@@ -376,13 +492,14 @@ def run_script(command: str) -> None:
 def clear_record_info(record_name: str, record_url: str) -> None:
     global monitoring
     recording.discard(record_name)
-    if record_url in url_comments and record_url in running_list:
+    if (record_url in url_comments or should_stop_via_web(record_name, record_url)) and record_url in running_list:
         running_list.remove(record_url)
         monitoring -= 1
         color_obj.print_colored(f"[{record_name}]已经从录制列表中移除\n", color_obj.YELLOW)
 
 
 def direct_download_stream(source_url: str, save_path: str, record_name: str, live_url: str, platform: str) -> bool:
+    register_web_recording_start(record_name, live_url, save_path, 'FLV', platform=platform)
     try:
         with open(save_path, 'wb') as f:
             client = httpx.Client(timeout=None)
@@ -395,6 +512,7 @@ def direct_download_stream(source_url: str, save_path: str, record_name: str, li
 
             with client.stream('GET', source_url, headers=headers, follow_redirects=True) as response:
                 if response.status_code != 200:
+                    register_web_recording_finish(record_name, 'error', save_path, f'请求直播流失败，状态码: {response.status_code}')
                     logger.error(f"请求直播流失败，状态码: {response.status_code}")
                     return False
 
@@ -402,17 +520,21 @@ def direct_download_stream(source_url: str, save_path: str, record_name: str, li
                 chunk_size = 1024 * 16
 
                 for chunk in response.iter_bytes(chunk_size):
-                    if live_url in url_comments or exit_recording:
+                    if live_url in url_comments or exit_recording or should_stop_via_web(record_name, live_url):
+                        stop_reason = 'Web 控制台请求停止' if should_stop_via_web(record_name, live_url) else 'URL 已注释或收到停止信号'
                         color_obj.print_colored(f"[{record_name}]录制时已被注释或请求停止,下载中断", color_obj.YELLOW)
                         clear_record_info(record_name, live_url)
+                        register_web_recording_finish(record_name, 'stopped', save_path, stop_reason)
                         return False
 
                     if chunk:
                         f.write(chunk)
                         downloaded += len(chunk)
                 print()
+                register_web_recording_finish(record_name, 'completed', save_path)
                 return True
     except Exception as e:
+        register_web_recording_finish(record_name, 'error', save_path, f'FLV下载错误: {e}')
         logger.error(f"FLV下载错误: {e} 发生错误的行数: {e.__traceback__.tb_lineno}")
         return False
 
@@ -423,6 +545,8 @@ def check_subprocess(record_name: str, record_url: str, ffmpeg_command: list, sa
     process = subprocess.Popen(
         ffmpeg_command, stdin=subprocess.PIPE, stderr=subprocess.STDOUT, startupinfo=get_startup_info(os_type)
     )
+    register_web_recording_start(record_name, record_url, save_file_path, save_type)
+    register_web_recording_process(record_name, process)
 
     subs_file_path = save_file_path.rsplit('.', maxsplit=1)[0]
     subs_thread_name = f'subs_{Path(subs_file_path).name}'
@@ -433,62 +557,76 @@ def check_subprocess(record_name: str, record_url: str, ffmpeg_command: list, sa
         create_var[subs_thread_name].daemon = True
         create_var[subs_thread_name].start()
 
-    while process.poll() is None:
-        if record_url in url_comments or exit_recording:
-            color_obj.print_colored(f"[{record_name}]录制时已被注释,本条线程将会退出", color_obj.YELLOW)
-            clear_record_info(record_name, record_url)
-            # process.terminate()
-            if os.name == 'nt':
-                if process.stdin:
-                    process.stdin.write(b'q')
-                    process.stdin.close()
-            else:
-                process.send_signal(signal.SIGINT)
-            process.wait()
-            return True
-        time.sleep(1)
+    try:
+        while process.poll() is None:
+            web_stop_requested = should_stop_via_web(record_name, record_url)
+            paused_via_web = is_paused_via_web(record_name, record_url)
+            if record_url in url_comments or exit_recording or web_stop_requested:
+                pause_requested = paused_via_web and web_stop_requested
+                stop_reason = 'Web 控制台请求暂停' if pause_requested else (
+                    'Web 控制台请求停止' if web_stop_requested else 'URL 已注释或收到停止信号'
+                )
+                color_obj.print_colored(f"[{record_name}]录制时已被注释,本条线程将会退出", color_obj.YELLOW)
+                clear_record_info(record_name, record_url)
+                if os.name == 'nt':
+                    if process.stdin:
+                        process.stdin.write(b'q')
+                        process.stdin.close()
+                else:
+                    process.send_signal(signal.SIGINT)
+                process.wait()
+                if pause_requested:
+                    register_web_recording_pause(record_name, save_file_path, stop_reason)
+                else:
+                    register_web_recording_finish(record_name, 'stopped', save_file_path, stop_reason)
+                return True
+            time.sleep(1)
 
-    return_code = process.returncode
-    stop_time = time.strftime('%Y-%m-%d %H:%M:%S')
-    if return_code == 0:
-        if converts_to_mp4 and save_type == 'TS':
-            if split_video_by_time:
-                file_paths = utils.get_file_paths(os.path.dirname(save_file_path))
-                prefix = os.path.basename(save_file_path).rsplit('_', maxsplit=1)[0]
-                for path in file_paths:
-                    if prefix in path:
-                        threading.Thread(target=converts_mp4, args=(path, delete_origin_file)).start()
-            else:
-                threading.Thread(target=converts_mp4, args=(save_file_path, delete_origin_file)).start()
-        print(f"\n{record_name} {stop_time} 直播录制完成\n")
+        return_code = process.returncode
+        stop_time = time.strftime('%Y-%m-%d %H:%M:%S')
+        if return_code == 0:
+            register_web_recording_finish(record_name, 'completed', save_file_path)
+            if converts_to_mp4 and save_type == 'TS':
+                if split_video_by_time:
+                    file_paths = utils.get_file_paths(os.path.dirname(save_file_path))
+                    prefix = os.path.basename(save_file_path).rsplit('_', maxsplit=1)[0]
+                    for path in file_paths:
+                        if prefix in path:
+                            threading.Thread(target=converts_mp4, args=(path, delete_origin_file)).start()
+                else:
+                    threading.Thread(target=converts_mp4, args=(save_file_path, delete_origin_file)).start()
+            print(f"\n{record_name} {stop_time} 直播录制完成\n")
 
-        if script_command:
-            logger.debug("开始执行脚本命令!")
-            if "python" in script_command:
-                params = [
-                    f'--record_name "{record_name}"',
-                    f'--save_file_path "{save_file_path}"',
-                    f'--save_type {save_type}',
-                    f'--split_video_by_time {split_video_by_time}',
-                    f'--converts_to_mp4 {converts_to_mp4}',
-                ]
-            else:
-                params = [
-                    f'"{record_name.split(" ", maxsplit=1)[-1]}"',
-                    f'"{save_file_path}"',
-                    save_type,
-                    f'split_video_by_time:{split_video_by_time}',
-                    f'converts_to_mp4:{converts_to_mp4}'
-                ]
-            script_command = script_command.strip() + ' ' + ' '.join(params)
-            run_script(script_command)
-            logger.debug("脚本命令执行结束!")
+            if script_command:
+                logger.debug("开始执行脚本命令!")
+                if "python" in script_command:
+                    params = [
+                        f'--record_name "{record_name}"',
+                        f'--save_file_path "{save_file_path}"',
+                        f'--save_type {save_type}',
+                        f'--split_video_by_time {split_video_by_time}',
+                        f'--converts_to_mp4 {converts_to_mp4}',
+                    ]
+                else:
+                    params = [
+                        f'"{record_name.split(" ", maxsplit=1)[-1]}"',
+                        f'"{save_file_path}"',
+                        save_type,
+                        f'split_video_by_time:{split_video_by_time}',
+                        f'converts_to_mp4:{converts_to_mp4}'
+                    ]
+                script_command = script_command.strip() + ' ' + ' '.join(params)
+                run_script(script_command)
+                logger.debug("脚本命令执行结束!")
 
-    else:
-        color_obj.print_colored(f"\n{record_name} {stop_time} 直播录制出错,返回码: {return_code}\n", color_obj.RED)
+        else:
+            register_web_recording_finish(record_name, 'error', save_file_path, f'ffmpeg 返回码: {return_code}')
+            color_obj.print_colored(f"\n{record_name} {stop_time} 直播录制出错,返回码: {return_code}\n", color_obj.RED)
 
-    recording.discard(record_name)
-    return False
+        recording.discard(record_name)
+        return False
+    finally:
+        unregister_web_recording_process(record_name)
 
 
 def clean_name(input_text):
@@ -1094,6 +1232,13 @@ def start_record(url_data: tuple, count_variable: int = -1) -> None:
                         else:
                             content = f"\r{record_name} 正在直播中..."
                             print(content)
+                            stop_state = get_web_stop_state(record_name=record_name, record_url=record_url)
+                            if stop_state.get('requested') and stop_state.get('reason') == 'stop':
+                                if auto_resume_stopped_url_via_web(record_name=record_name, record_url=record_url):
+                                    color_obj.print_colored(
+                                        f"[{record_name}]检测到直播在线，已自动清除停止标记并恢复录制",
+                                        color_obj.YELLOW,
+                                    )
 
                             if live_status_push and not start_pushed:
                                 if begin_show_push:
@@ -1632,6 +1777,8 @@ def start_record(url_data: tuple, count_variable: int = -1) -> None:
                 # 这里是正常循环
                 while x:
                     x = x - 1
+                    if web_console_service and web_console_service.is_running and web_console_service.is_config_reload_requested():
+                        break
                     if loop_time:
                         print(f'\r{anchor_name}循环等待{x}秒 ', end="")
                     time.sleep(1)
@@ -1723,9 +1870,20 @@ if not check_ffmpeg_existence():
     logger.error("缺少ffmpeg无法进行录制，程序退出")
     sys.exit(1)
 os.makedirs(os.path.dirname(config_file), exist_ok=True)
+ensure_file(config_file)
+ensure_file(url_config_file)
 t3 = threading.Thread(target=backup_file_start, args=(), daemon=True)
 t3.start()
 utils.remove_duplicate_lines(url_config_file)
+web_console_service = WebConsoleService(
+    config_file=config_file,
+    url_config_file=url_config_file,
+    default_download_path=default_path,
+    snapshot_provider=build_runtime_snapshot,
+    logger=logger,
+)
+if web_console_service.start_from_config():
+    print(f'Web 控制台已启动: {web_console_service.access_url}')
 
 
 def read_config_value(config_parser: configparser.RawConfigParser, section: str, option: str, default_value: Any) \
@@ -1746,8 +1904,7 @@ def read_config_value(config_parser: configparser.RawConfigParser, section: str,
         return config_parser.get(section, option)
     except (configparser.NoSectionError, configparser.NoOptionError):
         config_parser.set(section, option, str(default_value))
-        with open(config_file, 'w', encoding=text_encoding) as f:
-            config_parser.write(f)
+        save_ini(config_parser, config_file, encoding=text_encoding)
         return default_value
 
 
@@ -1782,6 +1939,8 @@ except Exception as err:
 
 while True:
 
+    last_config_scan_at = datetime.datetime.now().isoformat(timespec='seconds')
+
     try:
         if not os.path.isfile(config_file):
             with open(config_file, 'w', encoding=text_encoding) as file:
@@ -1793,9 +1952,15 @@ while True:
                 ini_URL_content = file.read().strip()
 
         if not ini_URL_content.strip():
-            input_url = input('请输入要录制的主播直播间网址（尽量使用PC网页端的直播间地址）:\n')
-            with open(url_config_file, 'w', encoding=text_encoding) as file:
-                file.write(input_url)
+            if sys.stdin and sys.stdin.isatty() and not (web_console_service and web_console_service.is_running):
+                input_url = input('请输入要录制的主播直播间网址（尽量使用PC网页端的直播间地址）:\n')
+                atomic_write_text(url_config_file, input_url, encoding=text_encoding)
+            else:
+                if not waiting_for_url_notice:
+                    print('URL_config.ini 当前为空，程序将持续等待；请通过 Web 控制台或直接编辑配置文件添加直播间地址。')
+                    waiting_for_url_notice = True
+        else:
+            waiting_for_url_notice = False
     except OSError as err:
         logger.error(f"发生 I/O 错误: {err}")
 
@@ -1923,6 +2088,8 @@ while True:
     lianjie_cookie = read_config_value(config, 'Cookie', 'lianjie_cookie', '')
     laixiu_cookie = read_config_value(config, 'Cookie', 'laixiu_cookie', '')
     picarto_cookie = read_config_value(config, 'Cookie', 'picarto_cookie', '')
+    if web_console_service and web_console_service.is_running and web_console_service.is_config_reload_requested():
+        web_console_service.clear_config_reload_request()
 
     video_save_type_list = ("FLV", "MKV", "TS", "MP4", "MP3音频", "M4A音频", "MP3", "M4A")
     if video_save_type and video_save_type.upper() in video_save_type_list:
@@ -2101,6 +2268,8 @@ while True:
                     url_comments = [i for i in url_comments if url not in i]
                     if is_comment_line:
                         url_comments.append(url)
+                    elif should_block_start_via_web(record_url=url, cooldown_seconds=delay_default):
+                        url_comments.append(url)
                     else:
                         new_line = (quality, url, name)
                         url_tuples_list.append(new_line)
@@ -2152,4 +2321,7 @@ while True:
         t2.start()
         first_run = False
 
-    time.sleep(3)
+    for _ in range(30):
+        if web_console_service and web_console_service.is_running and web_console_service.is_config_reload_requested():
+            break
+        time.sleep(0.1)

@@ -8,6 +8,8 @@ services:
     tty: true
     stdin_open: true
     #build: .
+    ports:
+      - "18080:18080"
     volumes:
       - ./config:/app/config
       - ./logs:/app/logs
